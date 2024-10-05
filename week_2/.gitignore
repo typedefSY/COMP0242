@@ -1,5 +1,5 @@
 # Ignore the build directory
-models/
+# models/
 
 # Ignore the egg-info directory
-configs/
+# configs/

@@ -1,7 +1,7 @@
 import os 
 import numpy as np
 from numpy.fft import fft, fftfreq
-import time
+# import time
 from matplotlib import pyplot as plt
 from simulation_and_control import pb, MotorCommands, PinWrapper, feedback_lin_ctrl, SinusoidalReference, CartesianDiffKin
 
@@ -90,7 +90,7 @@ def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=
         # get real time
         times_all.append(current_time)
         current_time += time_step
-        print("current time in seconds",current_time)
+        # print("current time in seconds",current_time)
 
     
     # TODO make the plot for the current joint
@@ -104,7 +104,7 @@ def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=
     plt.plot(times_all, q_d_all[:, joints_id], label='Desired Angle', linestyle='--')
     plt.xlabel('Time [s]')
     plt.ylabel('Joint Angle [rad]')
-    plt.title(f'Joint {joints_id} Angle vs Time')
+    plt.title(f'Joint {joints_id} with Kp={kp} and Kd={kd}')
     plt.legend()
     plt.show()
     
@@ -114,11 +114,13 @@ def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=
 
 
 
-def perform_frequency_analysis(data, dt):
+def perform_frequency_analysis(data, dt, joint_index=0):
     n = len(data)
-    yf = fft(data)
+    yf = fft(data[:, joint_index]) # Only consider the specified joint
     xf = fftfreq(n, dt)[:n//2]
+    print(f'shape of xf: {xf.shape}')
     power = 2.0/n * np.abs(yf[:n//2])
+    print(f'shape of power: {power.shape}')
 
     # Optional: Plot the spectrum
     plt.figure()
@@ -127,6 +129,7 @@ def perform_frequency_analysis(data, dt):
     plt.xlabel("Frequency in Hz")
     plt.ylabel("Amplitude")
     plt.grid(True)
+    
     plt.show()
 
     return xf, power
@@ -140,7 +143,7 @@ def perform_frequency_analysis(data, dt):
 if __name__ == '__main__':
     joint_id = 0  # Joint ID to tune
     regulation_displacement = 1.0  # Displacement from the initial joint position
-    init_gain=16
+    init_gain=1
     gain_step=1.5 
     max_gain=10000 
     test_duration=20 # in seconds
@@ -153,7 +156,7 @@ if __name__ == '__main__':
         kp = init_gain
         while kp < max_gain:
             q_mes_all = simulate_with_given_pid_values(sim, kp, joint_id, regulation_displacement, test_duration, plot=False)
-            # xf, power = perform_frequency_analysis(q_mes_all, sim.GetTimeStep())
+            xf, power = perform_frequency_analysis(q_mes_all, sim.GetTimeStep())
             kp *= gain_step  # Increment Kp for the next iteration
 
         if kp >= max_gain:

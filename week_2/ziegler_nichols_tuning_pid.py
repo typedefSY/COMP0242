@@ -32,8 +32,10 @@ def detect_steady_oscillation(sim_, errors, min_cycles=3, time_tolerance=0.1, am
         peak_periods = np.diff(peaks) * sim_.GetTimeStep()
         errors = np.array(errors)
         peak_values = np.abs(errors[peaks])
+        print("\033[91m========================== Standard Deviation =============================\033[0m")
         print(f'amplitude std: {np.std(peak_values)}')
         print(f'time std: {np.std(peak_periods)}')
+        print("\033[91m===========================================================================\033[0m")
         # if Standard Deviation of time and amplitude are both less or equal to 0.1, oscillation is true
         if np.std(peak_periods) < time_tolerance and np.std(peak_values) <= amplitude_tolerance:
             return True
@@ -76,7 +78,7 @@ def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=
         # measure current state
         q_mes = sim_.GetMotorAngles(0)
         qd_mes = sim_.GetMotorVelocities(0)
-        qdd_est = sim_.ComputeMotorAccelerationTMinusOne(0)
+        # qdd_est = sim_.ComputeMotorAccelerationTMinusOne(0) # Ignore qdd for this lab
         # Compute sinusoidal reference trajectory
         # Ensure q_init is within the range of the amplitude
         
@@ -167,13 +169,17 @@ if __name__ == '__main__':
         q_mes_all, Ku = simulate_with_given_pid_values(sim, kp, joint_id, regulation_displacement, test_duration, plot=False)
         xf, power = perform_frequency_analysis(q_mes_all, sim.GetTimeStep())
         power = power[1:]
+        print("\033[92m==================== Kp and Dominant frequency ============================\033[0m")
         print(f"Kp: {kp}, Dominant frequency: {xf[np.argmax(power)]}")
+        print("\033[92m===========================================================================\033[0m")
         if Ku > 0:
             Tu = 1/xf[np.argmax(power)]
             Td = 0.125 * Tu
             Kp = 0.8 * Ku
             Kd = 0.1* Tu * Ku
+            print("\033[92m======================= Final Kp, Td and Kd ===============================\033[0m")
             print(f"Kp: {Kp}, Td: {Td}, Kd: {Kd}")
+            print("\033[92m===========================================================================\033[0m")
             q_mes_all, Ku = simulate_with_given_pid_values(sim, kp, joint_id, regulation_displacement, test_duration, plot=True, kd=Kd)
             break
         kp += gain_step  # Increment Kp for the next iteration

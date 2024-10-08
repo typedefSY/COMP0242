@@ -3,6 +3,7 @@ import numpy as np
 from numpy.fft import fft, fftfreq
 # import time
 from matplotlib import pyplot as plt
+from scipy.signal import find_peaks
 from simulation_and_control import pb, MotorCommands, PinWrapper, feedback_lin_ctrl, SinusoidalReference, CartesianDiffKin
 
 
@@ -25,11 +26,22 @@ init_joint_angles = sim.GetInitMotorAngles()
 
 print(f"Initial joint angles: {init_joint_angles}")
 
-
+def detect_steady_oscillation(sim_, errors, min_cycles=3, time_tolerance=0.1, amplitude_tolerance=0.08):
+    peaks, _ = find_peaks(np.abs(errors))
+    if len(peaks) >= min_cycles:
+        peak_periods = np.diff(peaks) * sim_.GetTimeStep()
+        errors = np.array(errors)
+        peak_values = np.abs(errors[peaks])
+        print(f'amplitude std: {np.std(peak_values)}')
+        print(f'time std: {np.std(peak_periods)}')
+        # if Standard Deviation of time and amplitude are both less or equal to 0.1, oscillation is true
+        if np.std(peak_periods) < time_tolerance and np.std(peak_values) <= amplitude_tolerance:
+            return True
+    return False
 
 # single joint tuning
 #episode_duration is specified in seconds
-def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=0.1, episode_duration=10, plot=True):
+def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=0.1, episode_duration=10, plot=False, kd=0):
     
     # here we reset the simulator each time we start a new test
     sim_.ResetPose()
@@ -38,7 +50,8 @@ def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=
     kp_vec = np.array([1000]*dyn_model.getNumberofActuatedJoints())
     kp_vec[joints_id] = kp
 
-    kd = np.array([0]*dyn_model.getNumberofActuatedJoints())
+    kd_vec = np.array([0]*dyn_model.getNumberofActuatedJoints())
+    kd_vec[joints_id] = kd
     # IMPORTANT: to ensure that no side effect happens, we need to copy the initial joint angles
     q_des = init_joint_angles.copy()
     qd_des = np.array([0]*dyn_model.getNumberofActuatedJoints())
@@ -53,12 +66,13 @@ def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=
 
 
     # Initialize data storage
-    q_mes_all, qd_mes_all, q_d_all, qd_d_all, times_all = [], [], [], [], []
+    q_mes_all, qd_mes_all, q_d_all, qd_d_all, times_all, errors_all = [], [], [], [], [], []
     
 
     steps = int(episode_duration/time_step)
+    Ku = 0
     # testing loop
-    for i in range(steps):
+    for _ in range(steps):
         # measure current state
         q_mes = sim_.GetMotorAngles(0)
         qd_mes = sim_.GetMotorVelocities(0)
@@ -77,6 +91,8 @@ def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=
             break
         
         #simulation_time = sim.GetTimeSinceReset()
+        errors = q_des - q_mes
+        errors_all.append(errors[joints_id])
 
         # Store data for plotting
         q_mes_all.append(q_mes)
@@ -98,53 +114,46 @@ def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=
     q_d_all = np.array(q_d_all)
     times_all = np.array(times_all)
 
-    # if plot:
-    plt.figure()
-    plt.plot(times_all, q_mes_all[:, joints_id], label='Measured Angle')
-    plt.plot(times_all, q_d_all[:, joints_id], label='Desired Angle', linestyle='--')
-    plt.xlabel('Time [s]')
-    plt.ylabel('Joint Angle [rad]')
-    plt.title(f'Joint {joints_id} with Kp={kp} and Kd={kd}')
-    plt.legend()
-    plt.show()
+    oscillation_detected = detect_steady_oscillation(sim_, errors_all)
+    if plot or oscillation_detected:
+        Ku = kp
+        plt.figure()
+        plt.plot(times_all, q_mes_all[:, joints_id], label='Measured Angle')
+        plt.plot(times_all, q_d_all[:, joints_id], label='Desired Angle', linestyle='--')
+        plt.xlabel('Time [s]')
+        plt.ylabel('Joint Angle [rad]')
+        plt.title(f'Joint {joints_id} with Kp={kp} and Kd={kd}')
+        plt.legend()
+        plt.show()
     
     
-    return q_mes_all
+    return q_mes_all, Ku
      
-
-
-
 def perform_frequency_analysis(data, dt, joint_index=0):
     n = len(data)
     yf = fft(data[:, joint_index]) # Only consider the specified joint
     xf = fftfreq(n, dt)[:n//2]
-    print(f'shape of xf: {xf.shape}')
+    # print(f'shape of xf: {xf.shape}')
     power = 2.0/n * np.abs(yf[:n//2])
-    print(f'shape of power: {power.shape}')
 
     # Optional: Plot the spectrum
-    plt.figure()
-    plt.plot(xf, power)
-    plt.title("FFT of the signal")
-    plt.xlabel("Frequency in Hz")
-    plt.ylabel("Amplitude")
-    plt.grid(True)
+    # plt.figure()
+    # plt.plot(xf, power)
+    # plt.title("FFT of the signal")
+    # plt.xlabel("Frequency in Hz")
+    # plt.ylabel("Amplitude")
+    # plt.grid(True)
     
-    plt.show()
+    # plt.show()
 
     return xf, power
-
-
-# TODO Implement the table in thi function
-
-
 
 
 if __name__ == '__main__':
     joint_id = 0  # Joint ID to tune
     regulation_displacement = 1.0  # Displacement from the initial joint position
-    init_gain=1
-    gain_step=1.5 
+    init_gain=16
+    gain_step=0.01
     max_gain=10000 
     test_duration=20 # in seconds
     
@@ -152,12 +161,22 @@ if __name__ == '__main__':
     # TODO using simulate_with_given_pid_values() and perform_frequency_analysis() write you code to test different Kp values 
     # for each joint, bring the system to oscillation and compute the the PD parameters using the Ziegler-Nichols method
 
-    for joint_id in range(num_joints):  # Iterate over each joint
-        kp = init_gain
-        while kp < max_gain:
-            q_mes_all = simulate_with_given_pid_values(sim, kp, joint_id, regulation_displacement, test_duration, plot=False)
-            xf, power = perform_frequency_analysis(q_mes_all, sim.GetTimeStep())
-            kp *= gain_step  # Increment Kp for the next iteration
-
-        if kp >= max_gain:
-            print(f"Could not find suitable Kp for joint {joint_id} within max_gain limit")
+    # for joint_id in range(num_joints):  # Iterate over each joint
+    kp = init_gain
+    while kp < max_gain:
+        q_mes_all, Ku = simulate_with_given_pid_values(sim, kp, joint_id, regulation_displacement, test_duration, plot=False)
+        xf, power = perform_frequency_analysis(q_mes_all, sim.GetTimeStep())
+        power = power[1:]
+        print(f"Kp: {kp}, Dominant frequency: {xf[np.argmax(power)]}")
+        if Ku > 0:
+            Tu = 1/xf[np.argmax(power)]
+            Td = 0.125 * Tu
+            Kp = 0.8 * Ku
+            Kd = 0.1* Tu * Ku
+            print(f"Kp: {Kp}, Td: {Td}, Kd: {Kd}")
+            q_mes_all, Ku = simulate_with_given_pid_values(sim, kp, joint_id, regulation_displacement, test_duration, plot=True, kd=Kd)
+            break
+        kp += gain_step  # Increment Kp for the next iteration
+    if kp >= max_gain:
+        print(f"Could not find suitable Kp for joint {joint_id} within max_gain limit")
+        

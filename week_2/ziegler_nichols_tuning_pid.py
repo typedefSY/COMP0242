@@ -1,10 +1,9 @@
 import os 
 import numpy as np
 from numpy.fft import fft, fftfreq
-# import time
 from matplotlib import pyplot as plt
 from scipy.signal import find_peaks
-from simulation_and_control import pb, MotorCommands, PinWrapper, feedback_lin_ctrl, SinusoidalReference, CartesianDiffKin
+from simulation_and_control import pb, MotorCommands, PinWrapper, feedback_lin_ctrl
 
 
 # Configuration for the simulation
@@ -78,9 +77,6 @@ def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=
         # measure current state
         q_mes = sim_.GetMotorAngles(0)
         qd_mes = sim_.GetMotorVelocities(0)
-        # qdd_est = sim_.ComputeMotorAccelerationTMinusOne(0) # Ignore qdd for this lab
-        # Compute sinusoidal reference trajectory
-        # Ensure q_init is within the range of the amplitude
         
         # Control command
         cmd.tau_cmd = feedback_lin_ctrl(dyn_model, q_mes, qd_mes, q_des, qd_des, kp, kd)  # Zero torque command
@@ -101,8 +97,6 @@ def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=
         qd_mes_all.append(qd_mes)
         q_d_all.append(q_des)
         qd_d_all.append(qd_des)
-        #cur_regressor = dyn_model.ComputeDyanmicRegressor(q_mes,qd_mes, qdd_est)
-        #regressor_all = np.vstack((regressor_all, cur_regressor))
 
         #time.sleep(0.01)  # Slow down the loop for better visualization
         # get real time
@@ -126,6 +120,12 @@ def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=
         plt.ylabel('Joint Angle [rad]')
         plt.title(f'Joint {joints_id} with Kp={kp} and Kd={kd}')
         plt.legend()
+        # !Uncomment the following lines to save the plot
+        # Save the plot
+        # if not os.path.exists('images'):
+        #     os.makedirs('images')
+        # file_path = f'images/joint_{joints_id}_Kp_{kp:.2f}_Kd_{kd:.2f}.png'
+        # plt.savefig(file_path)
         plt.show()
     
     
@@ -138,15 +138,15 @@ def perform_frequency_analysis(data, dt, joint_index=0):
     # print(f'shape of xf: {xf.shape}')
     power = 2.0/n * np.abs(yf[:n//2])
 
-    # Optional: Plot the spectrum
+    # !Uncomment the following lines to plot and save the plot
     # plt.figure()
     # plt.plot(xf, power)
     # plt.title("FFT of the signal")
     # plt.xlabel("Frequency in Hz")
     # plt.ylabel("Amplitude")
     # plt.grid(True)
-    
     # plt.show()
+    # plt.savefig('images/fft.png')
 
     return xf, power
 
@@ -154,7 +154,7 @@ def perform_frequency_analysis(data, dt, joint_index=0):
 if __name__ == '__main__':
     joint_id = 0  # Joint ID to tune
     regulation_displacement = 1.0  # Displacement from the initial joint position
-    init_gain=16
+    init_gain=16    # 16 is the first good value for Kp without Kd
     gain_step=0.01
     max_gain=10000 
     test_duration=20 # in seconds

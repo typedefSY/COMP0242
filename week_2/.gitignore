@@ -3,3 +3,6 @@ models/
 
 # Ignore the egg-info directory
 configs/
+
+# Ignore images directory
+images/

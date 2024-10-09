@@ -52,7 +52,19 @@ def getSystemMatrices(sim, num_joints, damping_coefficients=None):
     
     time_step = sim.GetTimeStep()
     
-    # TODO: Finish the system matrices 
+    # TODO: Finish the system matrices
+    I = np.eye(num_joints)
+    zero_matrix = np.zeros((num_joints, num_joints))
+    
+    A = np.block([
+        [I, time_step * I],
+        [zero_matrix, I]
+    ])
+    
+    B = np.block([
+        [zero_matrix],
+        [time_step * I]
+    ])
     
     return A, B
 
@@ -69,7 +81,7 @@ def getCostMatrices(num_joints):
     num_controls = num_joints
     
     # Q = 1 * np.eye(num_states)  # State cost matrix
-    Q = 1000 * np.eye(num_states)
+    Q = 10000000 * np.eye(num_states)
     Q[num_joints:, num_joints:] = 0.0
     
     R = 0.1 * np.eye(num_controls)  # Control input cost matrix
@@ -110,7 +122,7 @@ def main():
     H,F = regulator.compute_H_and_F(S_bar, T_bar, Q_bar, R_bar)
     
     # Main control loop
-    episode_duration = 5
+    episode_duration = 10
     current_time = 0
     time_step = sim.GetTimeStep()
     steps = int(episode_duration/time_step)

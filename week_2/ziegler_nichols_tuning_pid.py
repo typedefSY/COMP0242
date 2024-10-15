@@ -121,7 +121,6 @@ def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=
         plt.title(f'Joint {joints_id} with Kp={kp} and Kd={kd}')
         plt.legend()
         # !Uncomment the following lines to save the plot
-        # Save the plot
         # if not os.path.exists('images'):
         #     os.makedirs('images')
         # file_path = f'images/joint_{joints_id}_Kp_{kp:.2f}_Kd_{kd:.2f}.png'

@@ -3,3 +3,6 @@ models/
 
 # Ignore the egg-info directory
 configs/
+
+# ignore py cache
+__pycache__/

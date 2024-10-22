@@ -144,10 +144,10 @@ def main():
         u_mpc = u_mpc[0:num_joints]
        
         # Control command
-        cmd.tau_cmd = dyn_cancel(dyn_model, q_mes, qd_mes, u_mpc)
+        tau_cmd = dyn_cancel(dyn_model, q_mes, qd_mes, u_mpc)
+        cmd.SetControlCmd(tau_cmd, ["torque"] * num_joints)
         sim.Step(cmd, "torque")  # Simulation step with torque command
 
-        print(cmd.tau_cmd)
         # Exit logic with 'q' key
         keys = sim.GetPyBulletClient().getKeyboardEvents()
         qKey = ord('q')

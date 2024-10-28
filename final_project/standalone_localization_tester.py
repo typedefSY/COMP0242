@@ -160,7 +160,7 @@ x_est_history = np.array(x_est_history)
 Sigma_est_history = np.array(Sigma_est_history)
 
 # Plotting the true path, estimated path, and landmarks.
-plt.figure()
+plt.figure(figsize=(12, 12))
 plt.plot(x_true_history[:, 0], x_true_history[:, 1], label='True Path')
 plt.plot(x_est_history[:, 0], x_est_history[:, 1], label='Estimated Path')
 plt.scatter(map.landmarks[:, 0], map.landmarks[:, 1],
@@ -171,7 +171,6 @@ plt.ylabel('Y position [m]')
 plt.title('Unicycle Robot Localization using EKF')
 plt.axis('equal')
 plt.grid(True)
-plt.show()
 
 # Note the angle state theta experiences "angles
 # wrapping". This small helper function is used
@@ -185,11 +184,15 @@ def wrap_angle(angle): return np.arctan2(np.sin(angle), np.cos(angle))
 state_name = ['x', 'y', 'θ']
 estimation_error = x_est_history - x_true_history
 estimation_error[:, -1] = wrap_angle(estimation_error[:, -1])
+plt.figure(figsize=(12, 12))
 for s in range(3):
-    plt.figure()
+    plt.subplot(3, 1, s+1)
     two_sigma = 2*np.sqrt(Sigma_est_history[:, s])
-    plt.plot(estimation_error[:, s])
-    plt.plot(two_sigma, linestyle='dashed', color='red')
+    plt.plot(estimation_error[:, s], label=f'{state_name[s]} error')
+    plt.plot(two_sigma, linestyle='dashed', color='red', label='2σ boundary')
     plt.plot(-two_sigma, linestyle='dashed', color='red')
-    plt.title(state_name[s])
-    plt.show()
+    plt.xlabel('Time step')
+    plt.legend()
+    plt.title(f'Estimation {state_name[s]} errors and 2σ boundary')
+plt.subplots_adjust(hspace=0.3)
+plt.show()

@@ -18,12 +18,20 @@ class FilterConfiguration(object):
 
 
 class Map(object):
-    def __init__(self):
-        self.landmarks = np.array([
-            [5, 10],
-            [15, 5],
-            [10, 15]
-        ])
+    def __init__(self, grid_spacing=10):
+        #! origiginal landmarks
+        # self.landmarks = np.array([
+        #     [5, 10],
+        #     [15, 5],
+        #     [10, 15]
+        # ])
+        #! grid landmarks
+        # x_coords = np.arange(-50, 51, grid_spacing)
+        # y_coords = np.arange(-50, 51, grid_spacing)
+        # xx, yy = np.meshgrid(x_coords, y_coords)
+        # self.landmarks = np.vstack([xx.ravel(), yy.ravel()]).T
+        #! random landmarks
+        self.landmarks = np.random.uniform(-50, 50, (50, 2))
 
 
 class RobotEstimator(object):
@@ -150,3 +158,50 @@ class RobotEstimator(object):
         # Angle wrap afterwards
         self._x_est[-1] = np.arctan2(np.sin(self._x_est[-1]),
                                      np.cos(self._x_est[-1]))
+    
+    def wrap_angle(self, angle):
+        return np.arctan2(np.sin(angle), np.cos(angle))
+    
+    def update_from_landmark_range_bearing_observations(self, y_range_bearing):
+        # Predicted the landmark measurements and build up the observation Jacobian
+        y_pred = []
+        C = []
+        x_pred = self._x_pred
+        for lm in self._map.landmarks:
+            dx_pred = lm[0] - x_pred[0]
+            dy_pred = lm[1] - x_pred[1]
+            range_pred = np.sqrt(dx_pred**2 + dy_pred**2)
+            bearing_pred = np.arctan2(dy_pred, dx_pred) - x_pred[2]
+
+            # Append predicted range and bearing
+            y_pred.append([range_pred, bearing_pred])
+
+            # Jacobian of the measurement model for range and bearing
+            range_jacobian = np.array([
+                -(dx_pred) / range_pred,
+                -(dy_pred) / range_pred,
+                0
+            ])
+            bearing_jacobian = np.array([
+                dy_pred / (range_pred**2),
+                -dx_pred / (range_pred**2),
+                -1
+            ])
+            C.append(np.vstack((range_jacobian, bearing_jacobian)))
+        
+        C = np.vstack(C)
+        y_pred_flatten = np.array(y_pred).flatten()
+
+        # Innovation
+        nu = y_range_bearing.flatten() - y_pred_flatten
+        for i in range(1, len(nu), 2):
+            nu[i] = self.wrap_angle(nu[i])
+
+        # Build the covariance matrix for both range and bearing
+        num_landmarks = len(self._map.landmarks)
+        W_landmarks = np.kron(np.eye(num_landmarks), np.diag([self._config.W_range, self._config.W_bearing]))
+        self._do_kf_update(nu, C, W_landmarks)
+
+        self._x_est[-1] = np.arctan2(np.sin(self._x_est[-1]),
+                                     np.cos(self._x_est[-1]))
+

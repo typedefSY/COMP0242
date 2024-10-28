@@ -71,7 +71,6 @@ class Simulator(object):
     # Get the observations to the landmarks. Return None if none visible
     def landmark_range_observations(self):
         y = []
-        C = []
         W = self._filter_config.W_range
         for lm in self._map.landmarks:
             # True range measurement (with noise)
@@ -80,6 +79,27 @@ class Simulator(object):
             range_true = np.sqrt(dx**2 + dy**2)
             range_meas = range_true + np.random.normal(0, np.sqrt(W))
             y.append(range_meas)
+
+        y = np.array(y)
+        return y
+    
+    def landmark_range_bearing_observations(self):
+        y = []
+        for lm in self._map.landmarks:
+            # Calculate true range and bearing
+            dx = lm[0] - self._x_true[0]
+            dy = lm[1] - self._x_true[1]
+            range_true = np.sqrt(dx**2 + dy**2)
+            bearing_true = np.arctan2(dy, dx) - self._x_true[2]
+
+            # Add noise to range and bearing measurements
+            range_noise = np.random.normal(0, np.sqrt(self._filter_config.W_range))
+            bearing_noise = np.random.normal(0, np.sqrt(self._filter_config.W_bearing))
+            range_meas = range_true + range_noise
+            bearing_meas = bearing_true + bearing_noise
+
+            # Append measurements to the observation list
+            y.append([range_meas, bearing_meas])
 
         y = np.array(y)
         return y
@@ -138,10 +158,16 @@ for step in range(sim_config.time_steps):
     estimator.predict_to(simulation_time)
 
     # Get the landmark observations.
-    y = simulator.landmark_range_observations()
+    # y = simulator.landmark_range_observations()
+    
+    # Get the range-bearing observations.
+    y = simulator.landmark_range_bearing_observations()
 
     # Update the filter with the latest observations.
-    estimator.update_from_landmark_range_observations(y)
+    # estimator.update_from_landmark_range_observations(y)
+    
+    # Update the filter with the range-bearing observations.
+    estimator.update_from_landmark_range_bearing_observations(y)
 
     # Get the current state estimate.
     x_est, Sigma_est = estimator.estimate()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -198,13 +198,16 @@ plt.title('Unicycle Robot Localization using EKF')
 plt.axis('equal')
 plt.grid(True)
 
+if not os.path.exists('images/task_1'):
+    os.makedirs('images/task_1')
+file_path = f'images/task_1/range_bearing_random_landmarks_tracking.png'
+plt.savefig(file_path)
+
 # Note the angle state theta experiences "angles
 # wrapping". This small helper function is used
 # to address the issue.
-
-
-def wrap_angle(angle): return np.arctan2(np.sin(angle), np.cos(angle))
-
+def wrap_angle(angle):
+    return np.arctan2(np.sin(angle), np.cos(angle))
 
 # Plot the 2 standard deviation and error history for each state.
 state_name = ['x', 'y', 'θ']
@@ -221,4 +224,8 @@ for s in range(3):
     plt.legend()
     plt.title(f'Estimation {state_name[s]} errors and 2σ boundary')
 plt.subplots_adjust(hspace=0.3)
+if not os.path.exists('images/task_1'):
+    os.makedirs('images/task_1')
+file_path = f'images/task_1/range_bearing_random_landmarks_errors.png'
+plt.savefig(file_path)
 plt.show()

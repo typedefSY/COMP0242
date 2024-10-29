@@ -144,6 +144,9 @@ x_true_history = []
 x_est_history = []
 Sigma_est_history = []
 
+#! range based flag, change it to false to use range-bearing observations
+range_based = False
+
 # Main loop
 for step in range(sim_config.time_steps):
 
@@ -157,17 +160,19 @@ for step in range(sim_config.time_steps):
     estimator.set_control_input(u)
     estimator.predict_to(simulation_time)
 
-    # Get the landmark observations.
-    # y = simulator.landmark_range_observations()
-    
-    # Get the range-bearing observations.
-    y = simulator.landmark_range_bearing_observations()
+    if range_based:
+        # Get the landmark observations.
+        y = simulator.landmark_range_observations()
+    else:
+        # Get the range-bearing observations.
+        y = simulator.landmark_range_bearing_observations()
 
-    # Update the filter with the latest observations.
-    # estimator.update_from_landmark_range_observations(y)
-    
-    # Update the filter with the range-bearing observations.
-    estimator.update_from_landmark_range_bearing_observations(y)
+    if range_based:
+        # Update the filter with the range-based observations.
+        estimator.update_from_landmark_range_observations(y)
+    else:
+        # Update the filter with the range-bearing observations.
+        estimator.update_from_landmark_range_bearing_observations(y)
 
     # Get the current state estimate.
     x_est, Sigma_est = estimator.estimate()

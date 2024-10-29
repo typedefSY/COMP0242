@@ -31,7 +31,7 @@ class Map(object):
         # xx, yy = np.meshgrid(x_coords, y_coords)
         # self.landmarks = np.vstack([xx.ravel(), yy.ravel()]).T
         #! random landmarks
-        self.landmarks = np.random.uniform(-50, 50, (50, 2))
+        self.landmarks = np.random.uniform(-50, 50, (70, 2))
 
 
 class RobotEstimator(object):

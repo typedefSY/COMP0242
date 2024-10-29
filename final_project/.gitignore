@@ -6,3 +6,6 @@ configs/
 
 # ignore py cache
 __pycache__/
+
+# ignore results images
+images/

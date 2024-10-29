@@ -1,8 +1,7 @@
 import numpy as np
-import time
 import os
 import matplotlib.pyplot as plt
-from simulation_and_control import pb, MotorCommands, PinWrapper, feedback_lin_ctrl, dyn_cancel, SinusoidalReference, CartesianDiffKin
+from simulation_and_control import pb, MotorCommands, PinWrapper, dyn_cancel
 from regulator_model import RegulatorModel
 
 def initialize_simulation(conf_file_name):
@@ -23,18 +22,17 @@ def print_joint_info(sim, dyn_model, controlled_frame_name):
     """Print initial joint angles and limits."""
     init_joint_angles = sim.GetInitMotorAngles()
     init_cartesian_pos, init_R = dyn_model.ComputeFK(init_joint_angles, controlled_frame_name)
-    
-    #########print(f"Initial joint angles: {init_joint_angles}")
+    print(f"Initial joint angles: {init_joint_angles}")
     
     lower_limits, upper_limits = sim.GetBotJointsLimit()
-    #########print(f"Lower limits: {lower_limits}")
-    #########print(f"Upper limits: {upper_limits}")
+    print(f"Lower limits: {lower_limits}")
+    print(f"Upper limits: {upper_limits}")
     
     joint_vel_limits = sim.GetBotJointsVelLimit()
-    ###########print(f"Joint velocity limits: {joint_vel_limits}")
+    print(f"Joint velocity limits: {joint_vel_limits}")
     
 
-def getSystemMatrices(sim, num_joints, damping_coefficients=None):
+def getSystemMatrices(sim, num_joints):
     """
     Get the system matrices A and B according to the dimensions of the state and control input.
     
@@ -47,12 +45,9 @@ def getSystemMatrices(sim, num_joints, damping_coefficients=None):
     A: State transition matrix
     B: Control input matrix
     """
-    num_states = 2 * num_joints
-    num_controls = num_joints
     
     time_step = sim.GetTimeStep()
-    
-    # TODO: Finish the system matrices
+
     I = np.eye(num_joints)
     zero_matrix = np.zeros((num_joints, num_joints))
     
@@ -68,7 +63,7 @@ def getSystemMatrices(sim, num_joints, damping_coefficients=None):
     
     return A, B
 
-def getSystemMatrice_with_damping(sim, num_joints, damping_coefficients=True):
+def getSystemMatrice_with_damping(sim, num_joints, damping_coefficients):
     """
     Get the system matrices A and B according to the dimensions of the state and control input.
     
@@ -78,32 +73,25 @@ def getSystemMatrice_with_damping(sim, num_joints, damping_coefficients=True):
     damping_coefficients: List or numpy array of damping coefficients for each joint (optional)
     
     Returns:
-    A: State transition matrix
+    A: State transition matrix with damping
     B: Control input matrix
     """
-    num_states = 2 * num_joints
-    num_controls = num_joints
     
     time_step = sim.GetTimeStep()
-    
-    # TODO: Finish the system matrices
+
     I = np.eye(num_joints)
     zero_matrix = np.zeros((num_joints, num_joints))
+    damping_matrix = np.diag(damping_coefficients)
     
     A = np.block([
         [I, time_step * I],
-        [zero_matrix, I]
+        [zero_matrix, I - time_step * damping_matrix]
     ])
 
     B = np.block([
         [zero_matrix],
         [time_step * I]
     ])
-
-    # To add damping into system matrix
-    if damping_coefficients is not None:
-      damping_matrix = np.diag(damping_coefficients)
-      A[num_joints:, num_joints:] = np.eye(num_joints) - time_step * damping_matrix
     
     return A, B
 
@@ -138,7 +126,7 @@ def main():
     cmd = MotorCommands()
     
     # Print joint information
-    #################################################print_joint_info(sim, dyn_model, controlled_frame_name)
+    print_joint_info(sim, dyn_model, controlled_frame_name)
     
     # Initialize data storage
     q_mes_all, qd_mes_all, q_d_all, qd_d_all = [], [], [], []
@@ -216,7 +204,7 @@ def main():
         if qKey in keys and keys[qKey] and sim.GetPyBulletClient().KEY_WAS_TRIGGERED:
             break
         
-        #simulation_time = sim.GetTimeSinceReset()
+        # simulation_time = sim.GetTimeSinceReset()
 
         # Store data for plotting
         q_mes_all.append(q_mes)
@@ -225,7 +213,7 @@ def main():
         # time.sleep(0.01)  # Slow down the loop for better visualization
         # get real time
         current_time += time_step
-        ###############3print(f"Current time: {current_time}")
+        # print(f"Current time: {current_time}")
 
     plt.figure(figsize=(10, 2 * num_joints))
 
@@ -262,17 +250,17 @@ def main_with_new_cost_matrix():
     cmd = MotorCommands()
     
     # Print joint information
-    #################################################print_joint_info(sim, dyn_model, controlled_frame_name)
+    print_joint_info(sim, dyn_model, controlled_frame_name)
     
     # Initialize data storage
     q_mes_all, qd_mes_all, q_d_all, qd_d_all = [], [], [], []
 
-    # Define the matrices\\
-
-    #Add daming into system matrix
-    #damping_coefficients = np.array([0.5, 0.6, 0.2, 0.1, 0.3, 0.35, 0.8])
-    #A, B = getSystemMatrices(sim, num_joints,damping_coefficients)
+    #! Uncomment the following lines to add damping into system matrix
+    # damping_coefficients = np.array([0.5, 0.6, 0.2, 0.1, 0.3, 0.35, 0.8])
+    # A, B = getSystemMatrices(sim, num_joints,damping_coefficients)
+    #! Comment the following line if you want to add damping into system matrix
     A, B = getSystemMatrices(sim, num_joints)
+
     Q, R = getCostMatrices(num_joints)
     
     np.set_printoptions(linewidth=np.inf)
@@ -345,7 +333,6 @@ def main_with_new_cost_matrix():
         cmd.SetControlCmd(tau_cmd, ["torque"]*7)
         sim.Step(cmd, "torque")  # Simulation step with torque command
 
-        #########################################################################3print(tau_cmd)
         # Exit logic with 'q' key
         keys = sim.GetPyBulletClient().getKeyboardEvents()
         qKey = ord('q')
@@ -359,7 +346,7 @@ def main_with_new_cost_matrix():
         # time.sleep(0.01)  # Slow down the loop for better visualization
         # get real time
         current_time += time_step
-        ###############3print(f"Current time: {current_time}")
+        # print(f"Current time: {current_time}")
 
 
     plt.figure(figsize=(10, 2 * num_joints))
@@ -388,8 +375,7 @@ def main_with_new_cost_matrix():
     
     
 if __name__ == '__main__':
-    
+    #! Comment the line below to run the main function with the new cost matrix
     main()
-
-#play with new cost matrix
+    #! Uncomment the line below to run the main function with the new cost matrix
     #main_with_new_cost_matrix()

@@ -227,30 +227,28 @@ def main():
         current_time += time_step
         ###############3print(f"Current time: {current_time}")
 
-    plt.figure(figsize=(10, 2 * num_joints))  # Adjust the figure size based on the number of joints
+    plt.figure(figsize=(10, 2 * num_joints))
 
-    # Loop through each joint to plot position and velocity in a combined grid
+    # Loop through each joint to plot position and velocity in one graph
     for i in range(num_joints):
-        # Position plot for joint i (in the left column)
-        plt.subplot(num_joints, 2, 2 * i + 1)  # 2*i+1 sets the left subplot in each row
+        # Position
+        plt.subplot(num_joints, 2, 2 * i + 1)
         plt.plot([q[i] for q in q_mes_all], label=f'Measured Position - Joint {i+1}')
         plt.title(f'Position Tracking for Joint {i+1}')
         plt.xlabel('Time steps')
         plt.ylabel('Position')
         plt.legend()
 
-        # Velocity plot for joint i (in the right column)
-        plt.subplot(num_joints, 2, 2 * i + 2)  # 2*i+2 sets the right subplot in each row
+        # Velocity
+        plt.subplot(num_joints, 2, 2 * i + 2)
         plt.plot([qd[i] for qd in qd_mes_all], label=f'Measured Velocity - Joint {i+1}')
         plt.title(f'Velocity Tracking for Joint {i+1}')
         plt.xlabel('Time steps')
         plt.ylabel('Velocity')
         plt.legend()
 
-    # Use tight layout to avoid overlap
     plt.tight_layout()
 
-    # Show the combined figure
     plt.show()
 
 #main function with new cost matrix
@@ -364,30 +362,28 @@ def main_with_new_cost_matrix():
         ###############3print(f"Current time: {current_time}")
 
 
-    plt.figure(figsize=(10, 2 * num_joints))  # Adjust the figure size based on the number of joints
+    plt.figure(figsize=(10, 2 * num_joints))
 
-    # Loop through each joint to plot position and velocity in a combined grid
+    # Loop through each joint to plot position and velocity in one graph
     for i in range(num_joints):
-        # Position plot for joint i (in the left column)
-        plt.subplot(num_joints, 2, 2 * i + 1)  # 2*i+1 sets the left subplot in each row
+        # Position
+        plt.subplot(num_joints, 2, 2 * i + 1)
         plt.plot([q[i] for q in q_mes_all], label=f'Measured Position - Joint {i+1}')
         plt.title(f'Position Tracking for Joint {i+1}')
         plt.xlabel('Time steps')
         plt.ylabel('Position')
         plt.legend()
 
-        # Velocity plot for joint i (in the right column)
-        plt.subplot(num_joints, 2, 2 * i + 2)  # 2*i+2 sets the right subplot in each row
+        # Velocity
+        plt.subplot(num_joints, 2, 2 * i + 2)
         plt.plot([qd[i] for qd in qd_mes_all], label=f'Measured Velocity - Joint {i+1}')
         plt.title(f'Velocity Tracking for Joint {i+1}')
         plt.xlabel('Time steps')
         plt.ylabel('Velocity')
         plt.legend()
 
-    # Use tight layout to avoid overlap
     plt.tight_layout()
 
-    # Show the combined figure
     plt.show()
     
     

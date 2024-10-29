@@ -1,9 +1,59 @@
 import numpy as np
-import time
 import os
 import matplotlib.pyplot as plt
-from simulation_and_control import pb, MotorCommands, PinWrapper, feedback_lin_ctrl, dyn_cancel, SinusoidalReference, CartesianDiffKin
+from simulation_and_control import pb, MotorCommands, PinWrapper, dyn_cancel, SinusoidalReference
 from tracker_model import TrackerModel
+
+#! Some lab switches
+# Control mode
+velocity_control = True  # Set to True for velocity control, False for position control only
+# Trajectory type
+trajectory_type = "sinusoidal"  # Set to "sinusoidal"/"linear"/"polynomial"
+# Test duration
+test_duration = 5  # Duration of the test in seconds
+
+class LinearReference:
+    def __init__(self, start, end, duration):
+        self.start = start
+        self.end = end
+        self.duration = duration
+        self.start_time = None
+
+    def get_values(self, current_time):
+        if self.start_time is None:
+            self.start_time = current_time
+
+        elapsed_time = current_time - self.start_time
+        t = elapsed_time / self.duration
+        q_d = self.start + t * (self.end - self.start)
+        if elapsed_time < self.duration:
+            qd_d = (self.end - self.start) / self.duration
+        else:
+            qd_d = np.zeros_like(self.start)
+        return q_d, qd_d
+
+class PolynomialReference:
+    def __init__(self, start, end, duration, start_velocity=0, end_velocity=0):
+        self.start = start
+        self.end = end
+        self.duration = duration
+        self.start_velocity = start_velocity
+        self.end_velocity = end_velocity
+        self.coefficients = self.compute_coefficients()
+
+    def compute_coefficients(self):
+        a0 = self.start
+        a1 = self.start_velocity
+        a2 = (3 * (self.end - self.start) / (self.duration ** 2)) - (self.end_velocity / self.duration)
+        a3 = (-2 * (self.end - self.start) / (self.duration ** 3)) + (self.end_velocity / (self.duration ** 2))
+        return [a0, a1, a2, a3]
+
+    def get_values(self, current_time):
+        t = current_time
+        a0, a1, a2, a3 = self.coefficients
+        q_d = a0 + a1 * t + a2 * t ** 2 + a3 * t ** 3
+        qd_d = a1 + 2 * a2 * t + 3 * a3 * t ** 2
+        return q_d, qd_d
 
 def initialize_simulation(conf_file_name):
     """Initialize simulation and dynamic model."""
@@ -66,10 +116,7 @@ def getSystemMatricesContinuos(num_joints, damping_coefficients=None):
     B = np.zeros((num_states, num_controls))
     
     # Lower half of B (control input affects velocity)
-    B[num_joints:, :] = np.eye(num_controls)
-    
-    print(f'A:\n {A}')
-    print(f'B:\n {B}')
+    B[num_joints:, :] = np.eye(num_controls) 
     
     return A, B
 
@@ -90,14 +137,14 @@ def getCostMatrices(num_joints):
     """
     num_states = 2 * num_joints
     num_controls = num_joints
-    
     # Q = 1 * np.eye(num_states)  # State cost matrix
-    p_w = 10000
-    v_w = 10
+    p_w = 10000 # Set the weight for the position
+    if (velocity_control):
+        v_w = 10 # Set the weight for the velocity
+    else:
+        v_w = 0
     Q_diag = np.array([p_w, p_w, p_w,p_w, p_w, p_w,p_w, v_w, v_w, v_w,v_w, v_w, v_w,v_w])
     Q = np.diag(Q_diag)
-    
-    # print(Q)
 
     R = 0.1 * np.eye(num_controls)  # Control input cost matrix
     
@@ -118,7 +165,6 @@ def main():
     
     # Initialize data storage
     q_mes_all, qd_mes_all, q_d_all, qd_d_all = [], [], [], []
-    regressor_all = np.array([])
 
     # Define the matrices
     A, B = getSystemMatricesContinuos(num_joints)
@@ -137,20 +183,37 @@ def main():
     S_bar, S_bar_C, T_bar, T_bar_C, Q_hat, Q_bar, R_bar = tracker.propagation_model_tracker_fixed_std()
     H,Ftra = tracker.tracker_std(S_bar, T_bar, Q_hat, Q_bar, R_bar)
     
-    # Sinusoidal reference
-    # Specify different amplitude values for each joint
-    amplitudes = [np.pi/4, np.pi/6, np.pi/4, np.pi/4, np.pi/4, np.pi/4, np.pi/4]  # Example amplitudes for joints
-    # Specify different frequency values for each joint
-    frequencies = [0.4, 0.5, 0.4, 0.4, 0.4, 0.4, 0.4]  # Example frequencies for joints
+    # Set trajectory reference
+    if trajectory_type == "sinusoidal":
+        # Sinusoidal reference
+        # Specify different amplitude values for each joint
+        amplitudes = [np.pi/4, np.pi/6, np.pi/4, np.pi/4, np.pi/4, np.pi/4, np.pi/4]  # Example amplitudes for joints
+        # Specify different frequency values for each joint
+        frequencies = [0.4, 0.5, 0.4, 0.4, 0.4, 0.4, 0.4]  # Example frequencies for joints
 
-    # Convert lists to NumPy arrays for easier manipulation in computations
-    amplitude = np.array(amplitudes)
-    frequency = np.array(frequencies)
-    ref = SinusoidalReference(amplitude, frequency, sim.GetInitMotorAngles())  # Initialize the reference
-
+        # Convert lists to NumPy arrays for easier manipulation in computations
+        amplitude = np.array(amplitudes)
+        frequency = np.array(frequencies)
+        ref = SinusoidalReference(amplitude, frequency, sim.GetInitMotorAngles())  # Initialize the reference
+    elif trajectory_type == "linear":
+        # Linear reference
+        start = sim.GetInitMotorAngles()
+        end = np.array([1, 1, 1, 1, 1, 1, 1])   # Example end position
+        duration = test_duration  # Example duration in seconds
+        ref = LinearReference(start, end, duration)  # Initialize the reference
+    elif trajectory_type == "polynomial":
+        # Polynomial reference
+        start = sim.GetInitMotorAngles()
+        end = np.array([1, 1, 1, 1, 1, 1, 1])
+        duration = test_duration
+        start_velocity = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+        end_velocity = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+        ref = PolynomialReference(start, end, duration, start_velocity, end_velocity)
+    else:
+        raise ValueError("Invalid trajectory type. Choose 'sinusoidal', 'linear', or 'polynomial'.")
 
     # Main control loop
-    episode_duration = 5 # duration in seconds
+    episode_duration = test_duration # duration in seconds
     current_time = 0
     time_step = sim.GetTimeStep()
     steps = int(episode_duration/time_step)
@@ -172,7 +235,6 @@ def main():
         # generate the predictive trajectory for N steps
         for j in range(N_mpc):
             q_d, qd_d = ref.get_values(current_time + j*time_step)
-            
             # here i need to stack the q_d and qd_d
             x_ref.append(np.vstack((q_d.reshape(-1, 1), qd_d.reshape(-1, 1))))
         
@@ -186,7 +248,7 @@ def main():
        
         # Control command
         tau_cmd = dyn_cancel(dyn_model, q_mes, qd_mes, u_mpc)
-        cmd.SetControlCmd(tau_cmd, ["torque"] * num_joints)
+        cmd.SetControlCmd(tau_cmd, ["torque"]*7)
         sim.Step(cmd, "torque")  # Simulation step with torque command
 
         # Exit logic with 'q' key
@@ -237,10 +299,7 @@ def main():
 
         plt.tight_layout()
         plt.show()
-    
-     
-    
-    
+
 if __name__ == '__main__':
     
     main()

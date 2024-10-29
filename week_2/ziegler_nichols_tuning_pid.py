@@ -25,7 +25,7 @@ init_joint_angles = sim.GetInitMotorAngles()
 
 print(f"Initial joint angles: {init_joint_angles}")
 
-def detect_steady_oscillation(sim_, errors, min_cycles=3, time_tolerance=0.1, amplitude_tolerance=0.08):
+def detect_steady_oscillation(sim_, errors, min_cycles=5, time_tolerance=0.1, amplitude_tolerance=0.08):
     peaks, _ = find_peaks(np.abs(errors))
     if len(peaks) >= min_cycles:
         peak_periods = np.diff(peaks) * sim_.GetTimeStep()

@@ -9,3 +9,5 @@ __pycache__/
 
 # ignore results images
 images/
+
+plot.py

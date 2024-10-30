@@ -41,7 +41,7 @@ class RobotEstimator(object):
         self._config = filter_config
         self._map = map
 
-    # This nethod MUST be called to start the filter
+    # This method MUST be called to start the filter
     def start(self):
         self._t = 0
         self._set_estimate_to_initial_conditions()

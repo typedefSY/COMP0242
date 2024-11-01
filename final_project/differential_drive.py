@@ -89,7 +89,7 @@ def main():
     C = np.eye(num_states)
     
     # Horizon length
-    N_mpc = 10
+    N_mpc = 20
 
     # Initialize the regulator model
     regulator = RegulatorModel(N_mpc, num_states, num_controls, num_states)
@@ -106,8 +106,10 @@ def main():
     cur_u_for_linearization = np.zeros(num_controls)
     regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
     # Define the cost matrices
-    Qcoeff = np.array([310, 310, 80.0])
-    Rcoeff = 0.5
+    #! Without dyn updating A, B matrices, use Q(144, 134, 180) and R(0.4)
+    #! With dyn updating A, B matrices, use Q(144, 134, 181) and R(0.4)
+    Qcoeff = np.array([144, 134, 181])
+    Rcoeff = 0.4
     regulator.setCostMatrices(Qcoeff,Rcoeff)
    
 
@@ -160,11 +162,10 @@ def main():
        
    
         # Compute the matrices needed for MPC optimization
-        # TODO here you want to update the matrices A and B at each time step if you want to linearize around the current points
-        # add this 3 lines if you want to update the A and B matrices at each time step 
-        #cur_state_x_for_linearization = [base_pos[0], base_pos[1], base_bearing_]
-        #cur_u_for_linearization = u_mpc
-        #regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
+        #! Uncomment following 3 lines if you don't want to update the A and B matrices at each time step 
+        cur_state_x_for_linearization = [base_pos[0], base_pos[1], base_bearing_]
+        cur_u_for_linearization = u_mpc
+        regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
         S_bar, T_bar, Q_bar, R_bar = regulator.propagation_model_regulator_fixed_std()
         H,F = regulator.compute_H_and_F(S_bar, T_bar, Q_bar, R_bar)
         x0_mpc = np.hstack((base_pos[:2], base_bearing_))
@@ -197,11 +198,27 @@ def main():
 
 
     # Plotting 
-    #add visualization of final x, y, trajectory and theta
-    
-    
-    
-    
+    # add visualization of final x, y, trajectory and theta
+    x_traj = [pos[0] for pos in base_pos_all]  
+    y_traj = [pos[1] for pos in base_pos_all]  
+    theta_traj = base_bearing_all 
+
+    final_x = x_traj[-1]
+    final_y = y_traj[-1]
+
+
+    plt.figure(figsize=(10, 5))
+
+    plt.plot(x_traj, y_traj, label="Robot trajectory", color='blue')
+    plt.scatter(final_x, final_y, color='red', s=50, label="Final Position")
+    plt.scatter(0, 0, color='green', s=50, label="desired Position")
+    plt.xlabel("x [m]")
+    plt.ylabel("y [m]")
+    plt.legend()
+    plt.grid(True)
+
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == '__main__':
     main()

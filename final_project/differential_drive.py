@@ -107,8 +107,8 @@ def main():
     cur_u_for_linearization = np.zeros(num_controls)
     regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
     # Define the cost matrices
-    #! Without dyn updating A, B matrices, use Q(144, 134, 180) and R(0.4)
-    #! With dyn updating A, B matrices, use Q(144, 134, 181) and R(0.4)
+    #! Without dyn updating A, B matrices, use Q(144, 134, 180) and R(0.4), NO P
+    #! With dyn updating A, B matrices, use Q(144, 134, 181) and R(0.4), NO P
     Qcoeff = np.array([144, 134, 181])
     Rcoeff = 0.4
     regulator.setCostMatrices(Qcoeff,Rcoeff)

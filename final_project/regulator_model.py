@@ -62,14 +62,23 @@ class RegulatorModel:
                 "Also, ensure that you implement the linearization logic in the updateSystemMatrices function."
             )
         
-        A =[]
-        B = []
         num_states = self.n
         num_controls = self.m
         num_outputs = self.q
         delta_t = sim.GetTimeStep()
         v0 = cur_u[0]
         theta0 = cur_x[2]
+        A = np.array([
+            [1, 0, -v0 * delta_t * np.sin(theta0)],
+            [0, 1, v0 * delta_t * np.cos(theta0)],
+            [0, 0, 1]
+        ])
+
+        B = np.array([
+            [delta_t * np.cos(theta0), 0],
+            [delta_t * np.sin(theta0), 0],
+            [0, delta_t]
+        ])
         # get A and B matrices by linearinzing the cotinuous system dynamics
         # The linearized continuous-time system is:
         

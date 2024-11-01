@@ -166,6 +166,7 @@ def main():
         cur_state_x_for_linearization = [base_pos[0], base_pos[1], base_bearing_]
         cur_u_for_linearization = u_mpc
         regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
+
         S_bar, T_bar, Q_bar, R_bar = regulator.propagation_model_regulator_fixed_std()
         H,F = regulator.compute_H_and_F(S_bar, T_bar, Q_bar, R_bar)
         x0_mpc = np.hstack((base_pos[:2], base_bearing_))
@@ -201,21 +202,41 @@ def main():
     # add visualization of final x, y, trajectory and theta
     x_traj = [pos[0] for pos in base_pos_all]  
     y_traj = [pos[1] for pos in base_pos_all]  
-    theta_traj = base_bearing_all 
+    theta_traj = base_bearing_all
+    distance_traj = []
+    for i in range(len(x_traj)):
+        distance = np.sqrt(x_traj[i]**2 + y_traj[i]**2)
+        distance_traj.append(distance)
+    print(distance_traj)
 
     final_x = x_traj[-1]
     final_y = y_traj[-1]
 
 
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(12, 5))
 
+    plt.subplot(1, 2, 1)
     plt.plot(x_traj, y_traj, label="Robot trajectory", color='blue')
     plt.scatter(final_x, final_y, color='red', s=50, label="Final Position")
     plt.scatter(0, 0, color='green', s=50, label="desired Position")
-    plt.xlabel("x [m]")
-    plt.ylabel("y [m]")
+    plt.xlabel("x")
+    plt.ylabel("y")
     plt.legend()
     plt.grid(True)
+    
+    plt.subplot(1, 2, 2)
+    plt.plot(distance_traj, label="Distance from origin", color='red')
+    plt.xlabel("Time Step")
+    plt.ylabel("Distance to original point")
+    plt.legend()
+    plt.grid(True)
+    
+    plt.suptitle("Robot Trajectory and Distance to Origin, with updated A and B matrices")
+    
+    if not os.path.exists("images/task2"):
+        os.makedirs("images/task2")
+    #! Uncomment the following line to save the plot
+    # plt.savefig("images/task2/updated_A_B_no_P.png")
 
     plt.tight_layout()
     plt.show()

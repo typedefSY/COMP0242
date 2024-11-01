@@ -163,7 +163,7 @@ def main():
        
    
         # Compute the matrices needed for MPC optimization
-        #! Uncomment following 3 lines if you don't want to update the A and B matrices at each time step 
+        #! Comment following 3 lines if you don't want to update the A and B matrices at each time step 
         cur_state_x_for_linearization = [base_pos[0], base_pos[1], base_bearing_]
         cur_u_for_linearization = u_mpc
         regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)

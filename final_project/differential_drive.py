@@ -128,7 +128,7 @@ def main():
     init_interface_all_wheels = ["velocity", "velocity", "velocity", "velocity"]
     cmd.SetControlCmd(init_angular_wheels_velocity_cmd, init_interface_all_wheels)
     
-    while True:
+    while current_time < 3.5:
 
 
         # True state propagation (with process noise)
@@ -218,7 +218,7 @@ def main():
 
     gs = gridspec.GridSpec(2, 2, height_ratios=[1, 1])
 
-    ax1 = fig.add_subplot(gs[0, :])
+    ax1 = fig.add_subplot(gs[0, :], aspect='equal')
     ax1.plot(x_traj, y_traj, label="Robot trajectory", color='blue')
     ax1.scatter(final_x, final_y, color='red', s=50, label="Final Position")
     ax1.scatter(0, 0, color='green', s=50, label="desired Position")

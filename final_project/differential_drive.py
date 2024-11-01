@@ -128,7 +128,7 @@ def main():
     init_interface_all_wheels = ["velocity", "velocity", "velocity", "velocity"]
     cmd.SetControlCmd(init_angular_wheels_velocity_cmd, init_interface_all_wheels)
     
-    while current_time < 3.5:
+    while True:
 
 
         # True state propagation (with process noise)

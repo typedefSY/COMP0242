@@ -2,6 +2,7 @@ import numpy as np
 import time
 import os
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 from simulation_and_control import pb, MotorCommands, PinWrapper, feedback_lin_ctrl, SinusoidalReference, CartesianDiffKin, differential_drive_controller_adjusting_bearing
 from simulation_and_control import differential_drive_regulation_controller,regulation_polar_coordinates,regulation_polar_coordinate_quat,wrap_angle,velocity_to_wheel_angular_velocity
 import pinocchio as pin
@@ -127,7 +128,7 @@ def main():
     init_interface_all_wheels = ["velocity", "velocity", "velocity", "velocity"]
     cmd.SetControlCmd(init_angular_wheels_velocity_cmd, init_interface_all_wheels)
     
-    while True:
+    while current_time <= 5.2:
 
 
         # True state propagation (with process noise)
@@ -213,25 +214,34 @@ def main():
     final_y = y_traj[-1]
 
 
-    plt.figure(figsize=(12, 5))
+    fig = plt.figure(figsize=(12, 8))
 
-    plt.subplot(1, 2, 1)
-    plt.plot(x_traj, y_traj, label="Robot trajectory", color='blue')
-    plt.scatter(final_x, final_y, color='red', s=50, label="Final Position")
-    plt.scatter(0, 0, color='green', s=50, label="desired Position")
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.legend()
-    plt.grid(True)
+    gs = gridspec.GridSpec(2, 2, height_ratios=[1, 1])
+
+    ax1 = fig.add_subplot(gs[0, :])
+    ax1.plot(x_traj, y_traj, label="Robot trajectory", color='blue')
+    ax1.scatter(final_x, final_y, color='red', s=50, label="Final Position")
+    ax1.scatter(0, 0, color='green', s=50, label="desired Position")
+    ax1.set_xlabel("x")
+    ax1.set_ylabel("y")
+    ax1.legend()
+    ax1.grid(True)
+
+    ax2 = fig.add_subplot(gs[1, 0])
+    ax2.plot(distance_traj, label="Distance from origin", color='red')
+    ax2.set_xlabel("Time Step")
+    ax2.set_ylabel("Distance to original point")
+    ax2.legend()
+    ax2.grid(True)
+
+    ax3 = fig.add_subplot(gs[1, 1])
+    ax3.plot(theta_traj, label="Theta trajectory", color='green')
+    ax3.set_xlabel("Time Step")
+    ax3.set_ylabel("Theta")
+    ax3.legend()
+    ax3.grid(True)
     
-    plt.subplot(1, 2, 2)
-    plt.plot(distance_traj, label="Distance from origin", color='red')
-    plt.xlabel("Time Step")
-    plt.ylabel("Distance to original point")
-    plt.legend()
-    plt.grid(True)
-    
-    plt.suptitle("Robot Trajectory and Distance to Origin, with updated A and B matrices")
+    plt.suptitle("Robot Trajectory, Distance and theta, with updated A and B matrices")
     
     if not os.path.exists("images/task2"):
         os.makedirs("images/task2")

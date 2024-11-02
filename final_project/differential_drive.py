@@ -107,7 +107,7 @@ def main():
     cur_u_for_linearization = np.zeros(num_controls)
     regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
     # Define the cost matrices
-    #! Without dyn updating A, B matrices, use Q(144, 134, 180), N=20 and R(0.4), NO P
+    #! Fixed A, B matrices, use Q(144, 134, 180), N=20 and R(0.4), NO P
     #! With dyn updating A, B matrices, use Q(144, 134, 181), N=20 and R(0.4), NO P
     #! With dyn updating A, B matrices, use Q(165, 363, 580), N=4, R(0.2), and P=(300, 300, 300)
     Qcoeff = np.array([165, 363, 580])
@@ -163,8 +163,8 @@ def main():
        
    
         # Compute the matrices needed for MPC optimization
-        #! Comment following 3 lines if you don't want to update the A and B matrices at each time step 
         cur_state_x_for_linearization = [base_pos[0], base_pos[1], base_bearing_]
+        #! Comment following 2 lines if you don't want to update the A and B matrices at each time step 
         cur_u_for_linearization = u_mpc
         regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
 
@@ -246,7 +246,7 @@ def main():
     ax3.legend()
     ax3.grid(True)
     
-    plt.suptitle("Robot Trajectory, Distance and theta, with terminal cost and updated A, B matrices")
+    plt.suptitle("Robot Trajectory, Distance to goal position and bearing of robot")
     
     if not os.path.exists("images/task2"):
         os.makedirs("images/task2")

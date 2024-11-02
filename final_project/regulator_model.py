@@ -138,3 +138,8 @@ class RegulatorModel:
 
         self.Q = Q
         self.R = R
+
+    def predict_next_state(self, cur_x, cur_u):
+        next_x = self.A @ cur_x + self.B @ cur_u
+        return next_x
+    

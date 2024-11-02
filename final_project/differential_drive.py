@@ -128,11 +128,10 @@ def main():
     init_angular_wheels_velocity_cmd = np.array([0.0, 0.0, 0.0, 0.0])
     init_interface_all_wheels = ["velocity", "velocity", "velocity", "velocity"]
     cmd.SetControlCmd(init_angular_wheels_velocity_cmd, init_interface_all_wheels)
-    
+
+    predicted_pos_all = []
+
     while current_time <= 5.2:
-
-
-        # True state propagation (with process noise)
         ##### advance simulation ##################################################################
         sim.Step(cmd, "torque")
         time_step = sim.GetTimeStep()
@@ -179,7 +178,9 @@ def main():
         H_inv = np.linalg.inv(H)
         u_mpc = -H_inv @ F @ x0_mpc
         # Return the optimal control sequence
-        u_mpc = u_mpc[0:num_controls] 
+        u_mpc = u_mpc[0:num_controls]
+        predicted_state = regulator.predict_next_state(np.array(cur_state_x_for_linearization), u_mpc)
+        predicted_pos_all.append(predicted_state[:2])
         # Prepare control command to send to the low level controller
         left_wheel_velocity,right_wheel_velocity=velocity_to_wheel_angular_velocity(u_mpc[0],u_mpc[1], wheel_base_width, wheel_radius)
         angular_wheels_velocity_cmd = np.array([right_wheel_velocity, left_wheel_velocity, left_wheel_velocity, right_wheel_velocity])
@@ -205,7 +206,9 @@ def main():
     # Plotting 
     # add visualization of final x, y, trajectory and theta
     x_traj = [pos[0] for pos in base_pos_all]  
-    y_traj = [pos[1] for pos in base_pos_all]  
+    y_traj = [pos[1] for pos in base_pos_all]
+    x_pred = [pos[0] for pos in predicted_pos_all]
+    y_pred = [pos[1] for pos in predicted_pos_all]
     theta_traj = base_bearing_all
     distance_traj = []
     for i in range(len(x_traj)):
@@ -215,13 +218,13 @@ def main():
     final_x = x_traj[-1]
     final_y = y_traj[-1]
 
-
     fig = plt.figure(figsize=(12, 8))
 
     gs = gridspec.GridSpec(2, 2, height_ratios=[1, 1])
 
     ax1 = fig.add_subplot(gs[0, :], aspect='equal')
-    ax1.plot(x_traj, y_traj, label="Robot trajectory", color='blue')
+    ax1.plot(x_traj, y_traj, 'b-', label='Actual trajectory')
+    ax1.plot(x_pred, y_pred, 'r--', label='Predicted trajectory')
     ax1.scatter(final_x, final_y, color='red', s=50, label="Final Position")
     ax1.scatter(0, 0, color='green', s=50, label="desired Position")
     ax1.set_xlabel("x")

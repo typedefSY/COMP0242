@@ -90,7 +90,7 @@ def main():
     C = np.eye(num_states)
     
     # Horizon length
-    N_mpc = 20
+    N_mpc = 4
 
     # Initialize the regulator model
     regulator = RegulatorModel(N_mpc, num_states, num_controls, num_states)
@@ -107,12 +107,13 @@ def main():
     cur_u_for_linearization = np.zeros(num_controls)
     regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
     # Define the cost matrices
-    #! Without dyn updating A, B matrices, use Q(144, 134, 180) and R(0.4), NO P
-    #! With dyn updating A, B matrices, use Q(144, 134, 181) and R(0.4), NO P
-    Qcoeff = np.array([144, 134, 181])
-    Rcoeff = 0.4
-    regulator.setCostMatrices(Qcoeff,Rcoeff)
-   
+    #! Without dyn updating A, B matrices, use Q(144, 134, 180), N=20 and R(0.4), NO P
+    #! With dyn updating A, B matrices, use Q(144, 134, 181), N=20 and R(0.4), NO P
+    #! With dyn updating A, B matrices, use Q(165, 363, 580), N=4, R(0.2), and P=(300, 300, 300)
+    Qcoeff = np.array([165, 363, 580])
+    Rcoeff = 0.2
+    Pcoeff = [300, 300, 300]
+    regulator.setCostMatrices(Qcoeff,Rcoeff,Pcoeff)
 
     u_mpc = np.zeros(num_controls)
 
@@ -128,7 +129,7 @@ def main():
     init_interface_all_wheels = ["velocity", "velocity", "velocity", "velocity"]
     cmd.SetControlCmd(init_angular_wheels_velocity_cmd, init_interface_all_wheels)
     
-    while True:
+    while current_time <= 5.2:
 
 
         # True state propagation (with process noise)
@@ -168,7 +169,9 @@ def main():
         cur_u_for_linearization = u_mpc
         regulator.updateSystemMatrices(sim,cur_state_x_for_linearization,cur_u_for_linearization)
 
-        S_bar, T_bar, Q_bar, R_bar = regulator.propagation_model_regulator_fixed_std()
+        # S_bar, T_bar, Q_bar, R_bar = regulator.propagation_model_regulator_fixed_std()
+        #! Uncomment the line above and Comment the following line if you do not want to add terminal cost
+        S_bar, T_bar, Q_bar, R_bar = regulator.propagation_model_regulator_fixed_std_terminal_cost()
         H,F = regulator.compute_H_and_F(S_bar, T_bar, Q_bar, R_bar)
         x0_mpc = np.hstack((base_pos[:2], base_bearing_))
         x0_mpc = x0_mpc.flatten()
@@ -208,7 +211,6 @@ def main():
     for i in range(len(x_traj)):
         distance = np.sqrt(x_traj[i]**2 + y_traj[i]**2)
         distance_traj.append(distance)
-    print(distance_traj)
 
     final_x = x_traj[-1]
     final_y = y_traj[-1]
@@ -241,12 +243,12 @@ def main():
     ax3.legend()
     ax3.grid(True)
     
-    plt.suptitle("Robot Trajectory, Distance and theta, with updated A and B matrices")
+    plt.suptitle("Robot Trajectory, Distance and theta, with terminal cost and updated A, B matrices")
     
     if not os.path.exists("images/task2"):
         os.makedirs("images/task2")
     #! Uncomment the following line to save the plot
-    # plt.savefig("images/task2/updated_A_B_no_P.png")
+    # plt.savefig("images/task2/updated_A_B_with_P.png")
 
     plt.tight_layout()
     plt.show()

@@ -107,7 +107,7 @@ def getCostMatrices(num_joints):
     num_controls = num_joints
     
     #Q = 0.01 * np.eye(num_states)  # State cost matrix
-    Q = 1000 * np.eye(num_states)
+    Q = 10000000 * np.eye(num_states)
     Q[num_joints:, num_joints:] = 0.0
    
 

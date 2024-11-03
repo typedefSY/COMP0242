@@ -223,7 +223,7 @@ def main():
     #!################################## Task 2 ended ##################################!# 
     
     #! Plz make sure you turn on the noise flag in config file before running following code
-    #!################################## Task 3 and Task4, uncomment the following code to run the task ##################################!#
+    #!################################## Task3 and Task4, uncomment the following code and comment task2 to run ##################################!#
     # base_pos_all, base_bearing_all = [], []#
     # ekf_pos_all = []
 
